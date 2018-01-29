@@ -15,12 +15,12 @@ function getOwnerKey() {
 }
 const ownerKey = getOwnerKey();
 
-export const defaultMetaKeys = ['actionLinks','createDefaults','createTypes','filters','links','pagination','resourceType','sort','sortLinks','type'];
+export const defaultMetaKeys = ['actionLinks', 'createDefaults', 'createTypes', 'filters', 'links', 'pagination', 'resourceType', 'sort', 'sortLinks', 'type'];
 
 var Store = Ember.Service.extend({
   defaultTimeout: 30000,
   defaultPageSize: 1000,
-  baseUrl: '/v1',
+  baseUrl: '/api/v1',
   metaKeys: null,
   replaceActions: 'actionLinks',
   dropKeys: null,
@@ -35,15 +35,14 @@ var Store = Ember.Service.extend({
   removeAfterDelete: true,
 
 
-  fastboot: Ember.computed(function() {
+  fastboot: Ember.computed(function () {
     return Ember.getOwner(this).lookup('service:fastboot');
   }),
 
   init() {
     this._super();
 
-    if (!this.get('metaKeys') )
-    {
+    if (!this.get('metaKeys')) {
       this.set('metaKeys', defaultMetaKeys.slice());
     }
 
@@ -59,18 +58,14 @@ var Store = Ember.Service.extend({
     };
 
     let fastboot = this.get('fastboot');
-    if ( fastboot )
-    {
+    if (fastboot) {
       let name = this.get('shoeboxName');
-      if ( fastboot.get('isFastBoot') )
-      {
+      if (fastboot.get('isFastBoot')) {
         fastboot.get('shoebox').put(name, this._state);
       }
-      else
-      {
+      else {
         let box = fastboot.get('shoebox').retrieve(name);
-        if ( box )
-        {
+        if (box) {
           this._state = box;
         }
       }
@@ -90,19 +85,19 @@ var Store = Ember.Service.extend({
   getById(type, id) {
     type = normalizeType(type);
     var group = this._groupMap(type);
-    if ( group ) {
+    if (group) {
       return group[id];
     }
   },
 
   // Synchronously returns whether record for [type] and [id] is in the local cache.
   hasRecordFor(type, id) {
-    return !!this.getById(type,id);
+    return !!this.getById(type, id);
   },
 
   // Synchronously returns whether this exact record object is in the local cache
   hasRecord(obj) {
-    if ( !obj ) {
+    if (!obj) {
       return false;
     }
 
@@ -136,12 +131,12 @@ var Store = Ember.Service.extend({
     opt = opt || {};
     opt.depaginate = opt.depaginate !== false;
 
-    if ( !id && !opt.limit ) {
+    if (!id && !opt.limit) {
       opt.limit = this.defaultPageSize;
     }
 
-    if ( !type ) {
-      return Ember.RSVP.reject(ApiError.create({detail: 'type not specified'}));
+    if (!type) {
+      return Ember.RSVP.reject(ApiError.create({ detail: 'type not specified' }));
     }
 
     // If this is a request for all of the items of [type], then we'll remember that and not ask again for a subsequent request
@@ -149,32 +144,32 @@ var Store = Ember.Service.extend({
     opt.isForAll = !id && isCacheable;
 
     // See if we already have this resource, unless forceReload is on.
-    if ( opt.forceReload !== true ) {
-      if ( opt.isForAll && this._state.foundAll[type] ) {
-        return Ember.RSVP.resolve(this.all(type),'Cached find all '+type);
-      } else if ( isCacheable && id ) {
-        var existing = this.getById(type,id);
-        if ( existing ) {
-          return Ember.RSVP.resolve(existing,'Cached find '+type+':'+id);
+    if (opt.forceReload !== true) {
+      if (opt.isForAll && this._state.foundAll[type]) {
+        return Ember.RSVP.resolve(this.all(type), 'Cached find all ' + type);
+      } else if (isCacheable && id) {
+        var existing = this.getById(type, id);
+        if (existing) {
+          return Ember.RSVP.resolve(existing, 'Cached find ' + type + ':' + id);
         }
       }
     }
 
     // If URL is explicitly given, go straight to making the request.  Do not pass go, do not collect $200.
     // This is used for bootstraping to load the schema initially, and shouldn't be used for much else.
-    if ( opt.url ) {
+    if (opt.url) {
       return this._findWithUrl(opt.url, type, opt);
     } else {
       // Otherwise lookup the schema for the type and generate the URL based on it.
-      return this.find('schema', type, {url: 'schemas/'+encodeURIComponent(type)}).then((schema) => {
-        if ( schema ) {
-          var url = schema.linkFor('collection') + (id ? '/'+encodeURIComponent(id) : '');
-          if ( url ) {
+      return this.find('schema', type, { url: 'schemas/' + encodeURIComponent(type) }).then((schema) => {
+        if (schema) {
+          var url = schema.linkFor('collection') + (id ? '/' + encodeURIComponent(id) : '');
+          if (url) {
             return this._findWithUrl(url, type, opt);
           }
         }
 
-        return Ember.RSVP.reject(ApiError.create({detail: 'Unable to find schema for "' + type + '"'}));
+        return Ember.RSVP.reject(ApiError.create({ detail: 'Unable to find schema for "' + type + '"' }));
       });
     }
   },
@@ -196,8 +191,8 @@ var Store = Ember.Service.extend({
     type = normalizeType(type);
     opt = opt || {};
 
-    if ( this.haveAll(type) && this.isCacheable(opt) ) {
-      return Ember.RSVP.resolve(this.all(type),'All '+ type + ' already cached');
+    if (this.haveAll(type) && this.isCacheable(opt)) {
+      return Ember.RSVP.resolve(this.all(type), 'All ' + type + ' already cached');
     } else {
       return this.find(type, undefined, opt).then(() => {
         return this.all(type);
@@ -205,17 +200,17 @@ var Store = Ember.Service.extend({
     }
   },
 
-  normalizeUrl(url, includingAbsolute=false) {
+  normalizeUrl(url, includingAbsolute = false) {
     var origin = window.location.origin;
 
     // Make absolute URLs to ourselves root-relative
-    if ( includingAbsolute && url.indexOf(origin) === 0 ) {
+    if (includingAbsolute && url.indexOf(origin) === 0) {
       url = url.substr(origin.length);
     }
 
     // Make relative URLs root-relative
-    if ( !url.match(/^https?:/) && url.indexOf('/') !== 0 ) {
-      url = this.get('baseUrl').replace(/\/\+$/,'') + '/' + url;
+    if (!url.match(/^https?:/) && url.indexOf('/') !== 0) {
+      url = this.get('baseUrl').replace(/\/\+$/, '') + '/' + url;
     }
 
     return url;
@@ -227,22 +222,22 @@ var Store = Ember.Service.extend({
     opt.url = this.normalizeUrl(opt.url);
     opt.headers = this._headers(opt.headers);
     opt.processData = false;
-    if ( typeof opt.dataType === 'undefined' ) {
+    if (typeof opt.dataType === 'undefined') {
       opt.dataType = 'text'; // Don't let jQuery JSON parse
     }
 
-    if ( opt.timeout !== null && !opt.timeout ) {
+    if (opt.timeout !== null && !opt.timeout) {
       opt.timeout = this.defaultTimeout;
     }
 
-    if ( opt.data ) {
-      if ( !opt.contentType ) {
+    if (opt.data) {
+      if (!opt.contentType) {
         opt.contentType = 'application/json';
       }
 
-      if ( Serializable.detect(opt.data) ) {
+      if (Serializable.detect(opt.data)) {
         opt.data = JSON.stringify(opt.data.serialize());
-      } else if ( typeof opt.data === 'object' ) {
+      } else if (typeof opt.data === 'object') {
         opt.data = JSON.stringify(opt.data);
       }
     }
@@ -255,23 +250,23 @@ var Store = Ember.Service.extend({
     opt.url = this.normalizeUrl(opt.url);
     opt.depaginate = opt.depaginate !== false;
 
-    if ( this.mungeRequest ) {
+    if (this.mungeRequest) {
       opt = this.mungeRequest(opt);
     }
 
     return this.rawRequest(opt).then((xhr) => {
-      return this._requestSuccess(xhr,opt);
+      return this._requestSuccess(xhr, opt);
     }).catch((xhr) => {
-      return this._requestFailed(xhr,opt);
+      return this._requestFailed(xhr, opt);
     });
   },
 
   // Forget about all the resources that hae been previously remembered.
   reset() {
     var cache = this._state.cache;
-    if ( cache ) {
+    if (cache) {
       Object.keys(cache).forEach((key) => {
-        if ( cache[key] && cache[key].clear ) {
+        if (cache[key] && cache[key].clear) {
           cache[key].clear();
         }
       });
@@ -280,7 +275,7 @@ var Store = Ember.Service.extend({
     }
 
     var foundAll = this._state.foundAll;
-    if ( foundAll ) {
+    if (foundAll) {
       Object.keys(foundAll).forEach((key) => {
         foundAll[key] = false;
       });
@@ -313,7 +308,7 @@ var Store = Ember.Service.extend({
       [this.arrayProxyKey]: content
     };
 
-    let opt = this.get('arrayProxyOptions')||{};
+    let opt = this.get('arrayProxyOptions') || {};
     Object.keys(opt).forEach((key) => {
       data[key] = opt[key];
     });
@@ -334,15 +329,18 @@ var Store = Ember.Service.extend({
 
   _findWithUrl(url, type, opt) {
     var queue = this._state.findQueue;
-    var cls = getOwner(this).lookup('model:'+type);
-    url = urlOptions(url,opt,cls);
+    var cls = getOwner(this).lookup('model:' + type);
+    url = urlOptions(url, opt, cls);
 
     // Collect Headers
     var newHeaders = {};
+    /*
+    CHG: RIO ADVANCEMENT INC
     if ( cls && cls.constructor.headers )
     {
       applyHeaders(cls.constructor.headers, newHeaders, true);
-    }
+    } 
+    */
     applyHeaders(opt.headers, newHeaders, true);
     // End: Collect headers
 
@@ -363,14 +361,16 @@ var Store = Ember.Service.extend({
       opt.headers = newHeaders;
 
       later = this.request(opt).then((result) => {
-        if ( opt.isForAll ) {
+        if (opt.isForAll) {
           this._state.foundAll[type] = true;
-
-          if ( opt.removeMissing && result.type === 'collection') {
+          /*CHG: RIO ADVANCEMENT INC 
+          Change the result.type to 'List'
+          */
+          if (opt.removeMissing && result.type === 'List') {
             let all = this._group(type);
             let toRemove = [];
             all.forEach((obj) => {
-              if ( !result.includes(obj) ) {
+              if (!result.includes(obj)) {
                 toRemove.push(obj);
               }
             });
@@ -413,26 +413,26 @@ var Store = Ember.Service.extend({
     delete queue[key];
   },
 
-  _requestSuccess(xhr,opt) {
+  _requestSuccess(xhr, opt) {
     opt.responseStatus = xhr.status;
 
-    if ( xhr.status === 204 ) {
+    if (xhr.status === 204) {
       return;
     }
 
-    if ( xhr.body && typeof xhr.body === 'object' ) {
+    if (xhr.body && typeof xhr.body === 'object') {
       Ember.beginPropertyChanges();
       let response = this._typeify(xhr.body);
       delete xhr.body;
-      Object.defineProperty(response, 'xhr', {value: xhr, configurable: true});
+      Object.defineProperty(response, 'xhr', { value: xhr, configurable: true });
       Ember.endPropertyChanges();
 
       // Depaginate
-      if ( opt.depaginate && typeof response.depaginate === 'function' ) {
-        return response.depaginate().then(function() {
+      if (opt.depaginate && typeof response.depaginate === 'function') {
+        return response.depaginate().then(function () {
           return response;
         }).catch((xhr) => {
-          return this._requestFailed(xhr,opt);
+          return this._requestFailed(xhr, opt);
         });
       } else {
         return response;
@@ -442,48 +442,46 @@ var Store = Ember.Service.extend({
     }
   },
 
-  _requestFailed(xhr,opt) {
+  _requestFailed(xhr, opt) {
     var body;
+    // CHG: RioAdvancement, added a check for "Not Found"
+    if (xhr.statusText === 'Not Found') {
+      return {};
+    }
 
-    if ( xhr.err )
-    {
-      if ( xhr.err === 'timeout' )
-      {
+    if (xhr.err) {
+      if (xhr.err === 'timeout') {
         body = {
           code: 'Timeout',
           status: xhr.status,
-          message: `API request timeout (${opt.timeout/1000} sec)`,
-          detail: (opt.method||'GET') + ' ' + opt.url,
+          message: `API request timeout (${opt.timeout / 1000} sec)`,
+          detail: (opt.method || 'GET') + ' ' + opt.url,
         };
       }
-      else
-      {
-        body = {status: xhr.status, message: xhr.err};
+      else {
+        body = { status: xhr.status, message: xhr.err };
       }
 
       return finish(body);
     }
-    else if ( xhr.body && typeof xhr.body === 'object' )
-    {
+    else if (xhr.body && typeof xhr.body === 'object') {
       Ember.beginPropertyChanges();
       let out = finish(this._typeify(xhr.body));
       Ember.endPropertyChanges();
       return out;
     }
-    else
-    {
-      body = {status: xhr.status, message: xhr.body};
+    else {
+      body = { status: xhr.status, message: xhr.body };
       return finish(body);
     }
 
     function finish(body) {
-      if ( !ApiError.detectInstance(body) )
-      {
+      if (!ApiError.detectInstance(body)) {
         body = ApiError.create(body);
       }
 
       delete xhr.body;
-      Object.defineProperty(body, 'xhr', {value: xhr, configurable: true});
+      Object.defineProperty(body, 'xhr', { value: xhr, configurable: true });
       return Ember.RSVP.reject(body);
     }
   },
@@ -493,8 +491,7 @@ var Store = Ember.Service.extend({
     type = normalizeType(type);
     var cache = this._state.cache;
     var group = cache[type];
-    if ( !group )
-    {
+    if (!group) {
       group = [];
       cache[type] = group;
     }
@@ -507,8 +504,7 @@ var Store = Ember.Service.extend({
     type = normalizeType(type);
     var cache = this._state.cacheMap;
     var group = cache[type];
-    if ( !group )
-    {
+    if (!group) {
       group = {};
       cache[type] = group;
     }
@@ -527,27 +523,27 @@ var Store = Ember.Service.extend({
     groupMap[obj.id] = obj;
 
     // Update hasMany relationships
-    const watches = this._state.watchHasMany[type]||[];
+    const watches = this._state.watchHasMany[type] || [];
     const notify = [];
 
     let watch, val;
-    for ( let i = 0 ; i < watches.length ; i++ ) {
+    for (let i = 0; i < watches.length; i++) {
       watch = watches[i];
       val = obj.get(watch.targetField);
-      notify.push({type: watch.thisType, id: val, field: watch.thisField});
+      notify.push({ type: watch.thisType, id: val, field: watch.thisField });
     }
 
     // Update references relationships that have been looking for this resource
-    const key = type+':'+id;
+    const key = type + ':' + id;
     const missings = this._state.missingReference[key];
-    if ( missings ) {
+    if (missings) {
       notify.pushObjects(missings);
       delete this._state.missingReference[key];
     }
 
     this.notifyFieldsChanged(notify);
 
-    if ( obj.wasAdded && typeof obj.wasAdded === 'function' ) {
+    if (obj.wasAdded && typeof obj.wasAdded === 'function') {
       obj.wasAdded();
     }
   },
@@ -562,24 +558,23 @@ var Store = Ember.Service.extend({
     type = normalizeType(type);
     var group = this._group(type);
     var groupMap = this._groupMap(type);
-    var cls = getOwner(this).lookup('model:'+type);
-    group.pushObjects(pojos.map((input)=>  {
+    var cls = getOwner(this).lookup('model:' + type);
+    group.pushObjects(pojos.map((input) => {
 
       // actions is very unhappy property name for Ember...
-      if ( this.replaceActions && typeof input.actions !== 'undefined')
-      {
+      if (this.replaceActions && typeof input.actions !== 'undefined') {
         input[this.replaceActions] = input.actions;
         delete input.actions;
       }
 
       // Schemas are special
-      if ( type === 'schema' ) {
+      if (type === 'schema') {
         input._id = input.id;
         input.id = normalizeType(input.id);
       }
 
       input.store = this;
-      let obj =  cls.constructor.create(input);
+      let obj = cls.constructor.create(input);
       groupMap[obj.id] = obj;
       return obj;
     }));
@@ -596,10 +591,10 @@ var Store = Ember.Service.extend({
     delete groupMap[id];
 
     // Update hasMany relationships that refer to this resource
-    const watches = this._state.watchHasMany[type]||[];
+    const watches = this._state.watchHasMany[type] || [];
     const notify = [];
     let watch;
-    for ( let i = 0 ; i < watches.length ; i++ ) {
+    for (let i = 0; i < watches.length; i++) {
       watch = watches[i];
       notify.push({
         type: watch.thisType,
@@ -609,70 +604,81 @@ var Store = Ember.Service.extend({
     }
 
     // Update references relationships that have used this resource
-    const key = type+':'+id;
+    const key = type + ':' + id;
     const existing = this._state.watchReference[key];
-    if ( existing ) {
+    if (existing) {
       notify.pushObjects(existing);
       delete this._state.watchReference[key];
     }
 
     this.notifyFieldsChanged(notify);
 
-    if ( obj.wasRemoved && typeof obj.wasRemoved === 'function' ) {
+    if (obj.wasRemoved && typeof obj.wasRemoved === 'function') {
       obj.wasRemoved();
     }
 
     // If there's a different baseType, remove that one too
     const baseType = normalizeType(obj.baseType);
-    if ( baseType && type !== baseType ) {
+    if (baseType && type !== baseType) {
       this._remove(baseType, obj);
     }
   },
 
   // Turn a POJO into a Model: {updateStore: true}
-  _typeify(input, opt=null) {
-    if ( !input || typeof input !== 'object')
-    {
+  _typeify(input, opt = null) {
+    if (!input || typeof input !== 'object') {
       // Simple values can just be returned
       return input;
     }
 
-    if ( !opt ) {
-      opt = {applyDefaults: false};
+    if (!opt) {
+      opt = { applyDefaults: false };
     }
+    /* CHG: RioAdvancement 
+    Rename 'type' to 'kind' */
+    if (!Ember.get(input, 'kind')) {
+      input.kind = input.type_meta.kind;
+    }
+    let type = Ember.get(input, 'kind');
 
-    let type = Ember.get(input,'type');
-    if ( Ember.isArray(input) )
-    {
+    if (Ember.isArray(input)) {
       // Recurse over arrays
       return input.map(x => this._typeify(x, opt));
     }
-    else if ( !type )
-    {
+    else if (!type) {
       // If it doesn't have a type then there's no sub-fields to typeify
       return input;
     }
 
     type = normalizeType(type);
-    if ( type === 'collection')
-    {
+
+    /* CHG: RioAdvancement 
+   - Check for endswith 'list' 
+   - Add check for 'statistics'
+   */
+    if (type.endsWith('list')) {
       return this.createCollection(input, opt);
+    } else if (type.endsWith("statistics")) {
+      input.kind = input.kind.replace("Statistics", "")
+      this.createStatisticsCollection(input, opt);
     }
-    else if ( !type )
-    {
+    else if (!type) {
       return input;
     }
 
     let rec = this.createRecord(input, opt);
-    if ( !input.id || opt.updateStore === false ) {
+    if (!input.id || opt.updateStore === false) {
       return rec;
     }
 
+    /* CHG: RioAdvancement, rename 'type' to 'kind'  */
     // This must be after createRecord so that mangleIn() can change the baseType
-    let baseType = normalizeType(rec.get('baseType'));
-    if ( baseType ) {
+    let baseType = rec.get('kind');
+    if (baseType) {
+      baseType = normalizeType(baseType);
+
       // Only use baseType if it's different from type
-      if ( baseType === type ) {
+      if (baseType === type) {
         baseType = null;
       }
     }
@@ -680,25 +686,24 @@ var Store = Ember.Service.extend({
     let out = rec;
     const cacheEntry = this.getById(type, rec.id);
 
-    if ( cacheEntry )
-    {
+    if (cacheEntry) {
       // Check for hasMany relationship changes
-      const watches = (this._state.watchHasMany[type]||[]).slice();
+      const watches = (this._state.watchHasMany[type] || []).slice();
       const notify = [];
-      if ( baseType ) {
-        watches.addObjects(this._state.watchHasMany[baseType]||[]);
+      if (baseType) {
+        watches.addObjects(this._state.watchHasMany[baseType] || []);
       }
 
       let watch, oldVal, newVal;
-      for ( let i = 0 ; i < watches.length ; i++ ) {
+      for (let i = 0; i < watches.length; i++) {
         watch = watches[i];
         oldVal = cacheEntry.get(watch.targetField);
         newVal = rec.get(watch.targetField);
 
         //console.log('Compare', watch.targetField, oldVal, 'to', newVal);
-        if ( oldVal !== newVal ) {
-          notify.push({type: watch.thisType, id: oldVal, field: watch.thisField});
-          notify.push({type: watch.thisType, id: newVal, field: watch.thisField});
+        if (oldVal !== newVal) {
+          notify.push({ type: watch.thisType, id: oldVal, field: watch.thisField });
+          notify.push({ type: watch.thisType, id: newVal, field: watch.thisField });
         }
       }
 
@@ -708,11 +713,10 @@ var Store = Ember.Service.extend({
       // Update changed hasMany's
       this.notifyFieldsChanged(notify);
     }
-    else
-    {
+    else {
       this._add(type, rec);
 
-      if ( baseType ) {
+      if (baseType) {
         this._add(baseType, rec);
       }
     }
@@ -722,23 +726,33 @@ var Store = Ember.Service.extend({
 
   notifyFieldsChanged(ary) {
     let entry, tgt;
-    for ( let i = 0 ; i < ary.length ; i++ ) {
+    for (let i = 0; i < ary.length; i++) {
       entry = ary[i];
       tgt = this.getById(entry.type, entry.id);
-      if ( tgt ) {
-        //console.log('Notify', entry.type, entry.id, 'that', entry.field,'changed');
+      if (tgt) {
+        console.log('Notify', entry.type, entry.id, 'that', entry.field, 'changed');
         tgt.notifyPropertyChange(entry.field);
       }
     }
   },
 
-  // Create a collection: {key: 'data'}
+  /*CHG: RioAdvancement change data to items */
+  // Create a collection: {key: 'items'}
   createCollection(input, opt) {
     Ember.beginPropertyChanges();
-    let key = (opt && opt.key ? opt.key : 'data');
+    let key = (opt && opt.key ? opt.key : 'items');
     var cls = getOwner(this).lookup('model:collection');
-    var content = input[key].map(x => this._typeify(x, opt));
-    var output = cls.constructor.create({ content: content });
+
+    let choppedKind = normalizeType(input.kind.replace("List", ""));
+    var content = input[key].map(x => {
+      x.kind = choppedKind;
+      x.type = choppedKind;
+      x.id = x.id;
+      return this._typeify(x, opt);
+    });
+    var output = cls.constructor.create({
+      content: content
+    });
 
     Object.defineProperty(output, 'store', { value: this, configurable: true });
 
@@ -747,18 +761,33 @@ var Store = Ember.Service.extend({
     return output;
   },
 
+  /*CHG: RioAdvancement add a new statistics collection parser */
+  // Create a satistics collection
+  createStatisticsCollection(input, opt) {
+
+    Ember.beginPropertyChanges();
+
+    var content = input["results"]["statistics"]["nodes"].map(x => {
+      x.type = normalizeType(x.kind);
+      return this._typeify(x, opt);
+    });
+
+    Ember.endPropertyChanges();
+  },
+
+
   getClassFor(type) {
     let cls = this._state.classCache[type];
-    if ( cls ) {
+    if (cls) {
       return cls;
     }
 
     let owner = getOwner(this);
-    if ( type ) {
-      cls = owner.lookup('model:'+type);
+    if (type) {
+      cls = owner.lookup('model:' + type);
     }
 
-    if ( !cls ) {
+    if (!cls) {
       cls = owner.lookup('model:resource');
     }
 
@@ -767,57 +796,62 @@ var Store = Ember.Service.extend({
   },
 
   canCreate(type) {
-    let schema = this.getById('schema',type);
+    let schema = this.getById('schema', type);
     return schema && schema.collectionMethods && schema.collectionMethods.indexOf('POST') > -1;
   },
 
   canList(type) {
-    let schema = this.getById('schema',type);
+    let schema = this.getById('schema', type);
     return schema && schema.collectionMethods && schema.collectionMethods.indexOf('GET') > -1;
   },
 
+  /*CHG: RioAdvancement 
+  Set data.type with kind.
+  */
   // Create a record: {applyDefaults: false}
   createRecord(data, opt) {
+    if (!Ember.get(data, 'type')) {
+      data.type = Ember.get(data, 'kind');
+    }
+
     opt = opt || {};
-    let type = normalizeType(Ember.get(opt,'type')||Ember.get(data,'type')||'');
+    let type = normalizeType(Ember.get(opt, 'type') || Ember.get(data, 'type') || '');
 
     let cls;
-    if ( type ) {
+    if (type) {
       cls = this.getClassFor(type);
     }
 
-    let schema = this.getById('schema',type);
+    let schema = this.getById('schema', type);
     let input = data;
-    if ( opt.applyDefaults !== false && schema ) {
+    if (opt.applyDefaults !== false && schema) {
       input = schema.getCreateDefaults(data);
     }
 
     // actions is very unhappy property name for Ember...
-    if ( this.replaceActions && typeof input.actions !== 'undefined')
-    {
+    if (this.replaceActions && typeof input.actions !== 'undefined') {
       input[this.replaceActions] = input.actions;
       delete input.actions;
     }
 
     let cons = cls.constructor;
-    if ( cons.mangleIn && typeof cons.mangleIn === 'function' )
-    {
-      input = cons.mangleIn(input,this);
+    if (cons.mangleIn && typeof cons.mangleIn === 'function') {
+      input = cons.mangleIn(input, this);
     }
 
-    if ( schema ) {
+    if (schema) {
       let fields = schema.get('typeifyFields');
-      for ( let i = fields.length-1 ; i >= 0 ; i-- ) {
+      for (let i = fields.length - 1; i >= 0; i--) {
         let k = fields[i];
-        if ( input[k] ) {
+        if (input[k]) {
           input[k] = this._typeify(input[k], opt);
         }
       }
     }
     var output = cons.create(input);
-    Object.defineProperty(output, ownerKey, {enumerable: false, value: Ember.getOwner(this)})
+    Object.defineProperty(output, ownerKey, { enumerable: false, value: Ember.getOwner(this) })
 
-    Object.defineProperty(output, 'store', {enumerable: false, value: this, configurable: true});
+    Object.defineProperty(output, 'store', { enumerable: false, value: this, configurable: true });
     return output;
   },
 });

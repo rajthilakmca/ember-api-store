@@ -113,7 +113,7 @@ var Store = Ember.Service.extend({
   },
 
   isCacheable(opt) {
-    return !opt || (opt.depaginate && !opt.filter && !opt.forceReload);
+    return !opt || (!opt.filter && !opt.forceReload);
   },
 
   // Asynchronous, returns promise.
@@ -192,8 +192,12 @@ var Store = Ember.Service.extend({
     opt = opt || {};
 
     if (this.haveAll(type) && this.isCacheable(opt)) {
+      //this.all hold all data variable without "list" post-fix key from type.
+      type = type.replace("list", "");
+
       return Ember.RSVP.resolve(this.all(type), 'All ' + type + ' already cached');
     } else {
+
       return this.find(type, undefined, opt).then(() => {
         return this.all(type);
       });
@@ -339,7 +343,7 @@ var Store = Ember.Service.extend({
     if ( cls && cls.constructor.headers )
     {
       applyHeaders(cls.constructor.headers, newHeaders, true);
-    } 
+    }
     */
     applyHeaders(opt.headers, newHeaders, true);
     // End: Collect headers
@@ -348,6 +352,7 @@ var Store = Ember.Service.extend({
     var queueKey = JSON.stringify(newHeaders) + url;
 
     // check to see if the request is in the findQueue
+
     if (queue[queueKey]) {
       // get the filterd promise object
       var filteredPromise = queue[queueKey];
@@ -356,14 +361,14 @@ var Store = Ember.Service.extend({
       later = defer.promise;
 
     } else { // request is not in the findQueue
-
       opt.url = url;
       opt.headers = newHeaders;
 
       later = this.request(opt).then((result) => {
         if (opt.isForAll) {
+
           this._state.foundAll[type] = true;
-          /*CHG: RIO ADVANCEMENT INC 
+          /*CHG: RIO ADVANCEMENT INC
           Change the result.type to 'List'
           */
           if (opt.removeMissing && result.type === 'List') {
@@ -634,7 +639,7 @@ var Store = Ember.Service.extend({
     if (!opt) {
       opt = { applyDefaults: false };
     }
-    /* CHG: RioAdvancement 
+    /* CHG: RioAdvancement
     Rename 'type' to 'kind' */
     if (!Ember.get(input, 'kind')) {
       input.kind = input.type_meta.kind;
@@ -652,8 +657,8 @@ var Store = Ember.Service.extend({
 
     type = normalizeType(type);
 
-    /* CHG: RioAdvancement 
-   - Check for endswith 'list' 
+    /* CHG: RioAdvancement
+   - Check for endswith 'list'
    - Add check for 'statistics'
    */
     if (type.endsWith('list')) {
@@ -742,7 +747,6 @@ var Store = Ember.Service.extend({
     Ember.beginPropertyChanges();
     let key = (opt && opt.key ? opt.key : 'items');
     var cls = getOwner(this).lookup('model:collection');
-
     let choppedKind = normalizeType(input.kind.replace("List", ""));
     var content = input[key].map(x => {
       x.kind = choppedKind;
@@ -805,7 +809,7 @@ var Store = Ember.Service.extend({
     return schema && schema.collectionMethods && schema.collectionMethods.indexOf('GET') > -1;
   },
 
-  /*CHG: RioAdvancement 
+  /*CHG: RioAdvancement
   Set data.type with kind.
   */
   // Create a record: {applyDefaults: false}

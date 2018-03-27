@@ -421,7 +421,7 @@ var Store = Ember.Service.extend({
   _requestSuccess(xhr, opt) {
     opt.responseStatus = xhr.status;
 
-    if (xhr.status === 204) {
+    if (xhr.status === 204 || xhr.status === 404) {
       return;
     }
 

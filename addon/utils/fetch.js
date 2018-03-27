@@ -38,7 +38,7 @@ function respond(res, body) {
     headers: res.headers
   };
 
-  if (res.ok) {
+  if (res.ok || res.status == "404") {
     return out;
   } else {
     return Ember.RSVP.reject(out);

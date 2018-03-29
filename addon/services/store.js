@@ -449,31 +449,15 @@ var Store = Ember.Service.extend({
 
   _requestFailed(xhr, opt) {
     var body;
-    // CHG: RioAdvancement, added a check for "Not Found"
-    if (xhr.statusText === 'Not Found') {
-      return {};
-    }
 
-    if (xhr.err) {
-      if (xhr.err === 'timeout') {
+    if (xhr.body) {
         body = {
-          code: 'Timeout',
-          status: xhr.status,
-          message: `API request timeout (${opt.timeout / 1000} sec)`,
-          detail: (opt.method || 'GET') + ' ' + opt.url,
+          code: xhr.body.code,
+          status: xhr.body.status,
+          message: xhr.body.message,
+          reason: xhr.body.reason,
         };
-      }
-      else {
-        body = { status: xhr.status, message: xhr.err };
-      }
-
       return finish(body);
-    }
-    else if (xhr.body && typeof xhr.body === 'object') {
-      Ember.beginPropertyChanges();
-      let out = finish(this._typeify(xhr.body));
-      Ember.endPropertyChanges();
-      return out;
     }
     else {
       body = { status: xhr.status, message: xhr.body };

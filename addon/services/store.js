@@ -8,6 +8,10 @@ import { urlOptions } from '../utils/url-options';
 
 const { getOwner } = Ember;
 
+//The return codes that are to be continued by the callee
+ //This never gets cached so we can trap and show a notification warning
+ const CONTINUE_WITH_MSG_RETURN_CODES = ["502"];
+
 function getOwnerKey() {
   const x = {};
   Ember.setOwner(x);
@@ -421,8 +425,8 @@ var Store = Ember.Service.extend({
     opt.responseStatus = xhr.status;
 
     if (xhr.status === 204 || xhr.status === 404) {
-      return;
-    }
+    return;
+  }
 
     if (xhr.body && typeof xhr.body === 'object') {
       Ember.beginPropertyChanges();
@@ -450,11 +454,6 @@ var Store = Ember.Service.extend({
 
     var body;
 
-    if (xhr.status === 502){
-      opt.isForAll = false;
-      return xhr.body;
-    }
-
     if (xhr.body) {
         body = {
           code: xhr.body.code,
@@ -464,9 +463,17 @@ var Store = Ember.Service.extend({
         };
       return finish(body);
     }
-    else {
+    else if (CONTINUE_WITH_MSG_RETURN_CODES.contains(xhr.status)) {
+      body = xhr.body;
+      return continue_with_msg(body);
+    } else {
       body = { status: xhr.status, message: xhr.body };
       return finish(body);
+    }
+
+    function continue_with_msg(body) {
+      delete xhr.body;
+      return body
     }
 
     function finish(body) {
@@ -476,7 +483,7 @@ var Store = Ember.Service.extend({
 
       delete xhr.body;
       Object.defineProperty(body, 'xhr', { value: xhr, configurable: true });
-      return Ember.RSVP.reject(body);
+	return Ember.RSVP.reject(body);
     }
   },
 

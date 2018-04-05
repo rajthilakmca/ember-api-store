@@ -245,7 +245,6 @@ var Store = Ember.Service.extend({
         opt.data = JSON.stringify(opt.data);
       }
     }
-
     return fetch(opt.url, opt);
   },
 
@@ -448,7 +447,13 @@ var Store = Ember.Service.extend({
   },
 
   _requestFailed(xhr, opt) {
+
     var body;
+
+    if (xhr.status === 502){
+      opt.isForAll = false;
+      return xhr.body;
+    }
 
     if (xhr.body) {
         body = {

@@ -659,11 +659,7 @@ var Store = Ember.Service.extend({
    */
     if (type.endsWith('list')) {
       return this.createCollection(input, opt);
-    } else if (type.endsWith("statistics")) {
-      input.kind = input.kind.replace("Statistics", "")
-      this.createStatisticsCollection(input, opt);
-    }
-    else if (!type) {
+    } else if (!type) {
       return input;
     }
 
@@ -760,21 +756,6 @@ var Store = Ember.Service.extend({
     Ember.endPropertyChanges();
     return output;
   },
-
-  /*CHG: RioAdvancement add a new statistics collection parser */
-  // Create a satistics collection
-  createStatisticsCollection(input, opt) {
-
-    Ember.beginPropertyChanges();
-
-    var content = input["results"]["statistics"]["nodes"].map(x => {
-      x.type = normalizeType(x.kind);
-      return this._typeify(x, opt);
-    });
-
-    Ember.endPropertyChanges();
-  },
-
 
   getClassFor(type) {
     let cls = this._state.classCache[type];

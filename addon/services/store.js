@@ -30,6 +30,9 @@ var Store = Ember.Service.extend({
   dropKeys: null,
   shoeboxName: 'ember-api-store',
   headers: null,
+  desktop: false,
+  proxyHost: null,
+  proxyPort: null,
 
   arrayProxyClass: Ember.ArrayProxy,
   arrayProxyKey: 'content',
@@ -58,7 +61,7 @@ var Store = Ember.Service.extend({
       findQueue: null,
       watchHasMany: null,
       watchReference: null,
-      missingReference: null,
+      missingReference: null,      
     };
 
     let fastboot = this.get('fastboot');
@@ -76,6 +79,12 @@ var Store = Ember.Service.extend({
     }
 
     this.reset();
+  },
+
+  setApplication(desktop, host, port) {
+    this.desktop = desktop;
+    this.proxyHost = host;
+    this.proxyPort = port;
   },
 
   // All the saved state goes in here
@@ -210,24 +219,30 @@ var Store = Ember.Service.extend({
 
   normalizeUrl(url, includingAbsolute = false) {
     var origin = window.location.origin;
-
+    
     // Make absolute URLs to ourselves root-relative
     if (includingAbsolute && url.indexOf(origin) === 0) {
       url = url.substr(origin.length);
     }
-
+    
     // Make relative URLs root-relative
     if (!url.match(/^https?:/) && url.indexOf('/') !== 0) {
       url = this.get('baseUrl').replace(/\/\+$/, '') + '/' + url;
     }
-
+    
+    //Make desktop proxy URLS 
+    if (this.get('desktop') && !url.match(/^http?:/) && !url.match(/^https?:/)) {
+      url = this.get('proxyHost') + ":" +this.get('proxyPort') + url;
+    }
+    
     return url;
   },
 
   // Makes an AJAX request and returns a promise that resolves to an object
   // This is separate from request() so it can be mocked for tests, or if you just want a basic AJAX request.
-  rawRequest(opt) {
+  rawRequest(opt) {    
     opt.url = this.normalizeUrl(opt.url);
+    
     opt.headers = this._headers(opt.headers);
     opt.processData = false;
     if (typeof opt.dataType === 'undefined') {
@@ -253,8 +268,9 @@ var Store = Ember.Service.extend({
   },
 
   // Makes an AJAX request that resolves to a resource model
-  request(opt) {
+  request(opt) {    
     opt.url = this.normalizeUrl(opt.url);
+    
     opt.depaginate = opt.depaginate !== false;
 
     if (this.mungeRequest) {
